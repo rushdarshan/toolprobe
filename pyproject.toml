@@ -38,6 +38,9 @@ Homepage = "https://github.com/rushdarshan/toolprobe"
 Repository = "https://github.com/rushdarshan/toolprobe"
 Issues = "https://github.com/rushdarshan/toolprobe/issues"
 
+[project.scripts]
+toolprobe = "toolprobe.cli:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/toolprobe"]
 
