@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "toolprobe"
+version = "0.1.0"
+description = "OpenAPI-style breaking-change detection for LLM tool contracts."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+  { name = "rushdarshan", email = "rushdarshan@gmail.com" }
+]
+keywords = ["llm", "agents", "tools", "testing", "ci", "contracts"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Testing",
+]
+dependencies = [
+  "PyYAML>=6.0.2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/rushdarshan/toolprobe"
+Repository = "https://github.com/rushdarshan/toolprobe"
+Issues = "https://github.com/rushdarshan/toolprobe/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/toolprobe"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
