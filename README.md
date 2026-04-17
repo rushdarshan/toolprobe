@@ -60,6 +60,19 @@ tools:
         expected_recovery_contains: "couldn't fetch"
 ```
 
+`output_schema` also accepts a formal root object schema when only some top-level
+fields are required:
+
+```yaml
+output_schema:
+  type: object
+  properties:
+    condition: string
+    temperature_c: number
+  required:
+    - condition
+```
+
 ## Usage
 
 Validate the current contract:
@@ -79,11 +92,11 @@ Example output:
 ```text
 ToolProbe diff against HEAD~1
 ============================
-ERROR removed-required-arg tools.search_flights.required_args: argument 'date' is no longer required
+WARN removed-required-arg tools.search_flights.required_args: argument 'date' is no longer required
 ERROR arg-type-changed tools.search_flights.args.date: argument 'date' changed type
 ERROR removed-trigger tools.search_flights.triggers: trigger was removed: 'flights to {destination} on {date}'
 
-Summary: 3 error(s), 0 warning(s)
+Summary: 2 error(s), 1 warning(s)
 ```
 
 ## Checks
@@ -107,9 +120,10 @@ Summary: 3 error(s), 0 warning(s)
 - removed required arguments
 - changed argument types
 - removed trigger examples
-- removed output fields
+- removed output properties
 - changed output field types
 - removed recovery expectations
+- changed recovery expectations
 
 ## CI
 
@@ -139,4 +153,3 @@ jobs:
 pip install -e ".[dev]"
 pytest
 ```
-

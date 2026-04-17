@@ -277,3 +277,53 @@ tools:
     findings = lint_contract(contract)
 
     assert any(finding.code == "mock-success-schema-mismatch" for finding in findings)
+
+
+def test_formal_root_output_schema_supports_required_fields() -> None:
+    contract = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get current weather.
+    args:
+      city: string
+    output_schema:
+      type: object
+      properties:
+        condition: string
+        temperature_c: number
+      required:
+        - condition
+    mock_success:
+      condition: sunny
+"""
+    )
+
+    findings = lint_contract(contract)
+
+    assert [finding.code for finding in findings if finding.severity == "error"] == []
+
+
+def test_formal_root_output_schema_rejects_missing_required_field() -> None:
+    contract = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get current weather.
+    args:
+      city: string
+    output_schema:
+      type: object
+      properties:
+        condition: string
+      required:
+        - condition
+    mock_success: {}
+"""
+    )
+
+    findings = lint_contract(contract)
+
+    assert any(finding.code == "mock-success-schema-mismatch" for finding in findings)

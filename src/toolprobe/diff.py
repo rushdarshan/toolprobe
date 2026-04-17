@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from toolprobe.models import Contract, Tool
-from toolprobe.result import Finding
-from toolprobe.schema import schema_breaking_changes
+from toolprobe.result import Finding, Severity
+from toolprobe.schema import normalize_output_schema, schema_breaking_changes
 
 
 def diff_contracts(old: Contract, new: Contract) -> list[Finding]:
@@ -38,13 +38,27 @@ def _diff_tool(old: Tool, new: Tool) -> list[Finding]:
         findings.append(Finding("added-required-arg", f"argument '{arg_name}' is newly required", f"{path}.required_args"))
 
     for arg_name in sorted(old_required - new_required):
-        findings.append(Finding("removed-required-arg", f"argument '{arg_name}' is no longer required", f"{path}.required_args"))
+        findings.append(
+            Finding(
+                "removed-required-arg",
+                f"argument '{arg_name}' is no longer required",
+                f"{path}.required_args",
+                Severity.WARNING,
+            )
+        )
 
     for arg_name in sorted(new_forbidden - old_forbidden):
         findings.append(Finding("added-forbidden-arg", f"argument '{arg_name}' is newly forbidden", f"{path}.forbidden_args"))
 
     for arg_name in sorted(old_forbidden - new_forbidden):
-        findings.append(Finding("removed-forbidden-arg", f"argument '{arg_name}' is no longer forbidden", f"{path}.forbidden_args"))
+        findings.append(
+            Finding(
+                "removed-forbidden-arg",
+                f"argument '{arg_name}' is no longer forbidden",
+                f"{path}.forbidden_args",
+                Severity.WARNING,
+            )
+        )
 
     for arg_name in sorted(old_args.intersection(new_args)):
         findings.extend(
@@ -60,21 +74,15 @@ def _diff_tool(old: Tool, new: Tool) -> list[Finding]:
     for trigger in sorted(set(old.triggers) - set(new.triggers)):
         findings.append(Finding("removed-trigger", f"trigger was removed: {trigger!r}", f"{path}.triggers"))
 
-    old_output = old.output_schema
-    new_output = new.output_schema
-    for field_name in sorted(set(old_output) - set(new_output)):
-        findings.append(Finding("removed-output-field", f"output field '{field_name}' was removed", f"{path}.output_schema.{field_name}"))
-
-    for field_name in sorted(set(old_output).intersection(new_output)):
-        findings.extend(
-            schema_breaking_changes(
-                old_output[field_name],
-                new_output[field_name],
-                f"{path}.output_schema.{field_name}",
-                "output-type-changed",
-                "output",
-            )
+    findings.extend(
+        schema_breaking_changes(
+            normalize_output_schema(old.output_schema),
+            normalize_output_schema(new.output_schema),
+            f"{path}.output_schema",
+            "output-type-changed",
+            "output",
         )
+    )
 
     old_recoveries = {
         error.name: error.expected_recovery_contains for error in old.mock_errors if error.expected_recovery_contains

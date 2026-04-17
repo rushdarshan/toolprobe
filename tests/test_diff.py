@@ -1,5 +1,6 @@
 from toolprobe.diff import diff_contracts
 from toolprobe.models import load_contract_text
+from toolprobe.result import Severity
 
 
 def test_diff_flags_breaking_tool_contract_changes() -> None:
@@ -54,6 +55,7 @@ tools:
     assert "removed-trigger" in codes
     assert "output-type-changed" in codes
     assert "removed-recovery" in codes
+    assert any(finding.code == "removed-required-arg" and finding.severity == Severity.WARNING for finding in findings)
 
 
 def test_diff_flags_removed_tool() -> None:
@@ -213,7 +215,7 @@ tools:
 
     findings = diff_contracts(old, new)
 
-    assert any(finding.code == "removed-forbidden-arg" for finding in findings)
+    assert any(finding.code == "removed-forbidden-arg" and finding.severity == Severity.WARNING for finding in findings)
 
 
 def test_diff_flags_deep_output_type_changes() -> None:
@@ -365,6 +367,92 @@ tools:
     findings = diff_contracts(old, new)
 
     assert any(finding.code == "removed-required-property" and "profile.required" in finding.path for finding in findings)
+
+
+def test_diff_does_not_flag_added_output_required_property() -> None:
+    old = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_user
+    description: Get user.
+    args:
+      id: string
+    output_schema:
+      profile:
+        type: object
+        properties:
+          name: string
+          email: string
+        required:
+          - name
+"""
+    )
+    new = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_user
+    description: Get user.
+    args:
+      id: string
+    output_schema:
+      profile:
+        type: object
+        properties:
+          name: string
+          email: string
+        required:
+          - name
+          - email
+"""
+    )
+
+    findings = diff_contracts(old, new)
+
+    assert not any(finding.code == "added-required-property" for finding in findings)
+
+
+def test_diff_flags_formal_root_output_required_removal() -> None:
+    old = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_user
+    description: Get user.
+    args:
+      id: string
+    output_schema:
+      type: object
+      properties:
+        name: string
+        email: string
+      required:
+        - name
+        - email
+"""
+    )
+    new = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_user
+    description: Get user.
+    args:
+      id: string
+    output_schema:
+      type: object
+      properties:
+        name: string
+        email: string
+      required:
+        - name
+"""
+    )
+
+    findings = diff_contracts(old, new)
+
+    assert any(finding.code == "removed-required-property" and finding.path.endswith("output_schema.required") for finding in findings)
 
 
 def test_diff_does_not_flag_removed_input_required_property() -> None:

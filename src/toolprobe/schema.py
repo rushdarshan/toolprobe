@@ -60,12 +60,34 @@ def is_valid_field_map(schema_map: dict[str, Any]) -> bool:
     return all(is_valid_schema(child) for child in schema_map.values())
 
 
+def is_valid_output_schema(schema: dict[str, Any]) -> bool:
+    if _is_formal_output_schema(schema):
+        return type_name(schema) == "object" and is_valid_schema(schema)
+    return is_valid_field_map(schema)
+
+
 def value_matches_field_map(value: Any, schema_map: dict[str, Any]) -> bool:
     if not isinstance(value, dict):
         return False
     if set(value) != set(schema_map):
         return False
     return all(value_matches_schema(value[field], schema_map[field]) for field in value)
+
+
+def value_matches_output_schema(value: Any, schema: dict[str, Any]) -> bool:
+    if _is_formal_output_schema(schema):
+        return value_matches_schema(value, schema)
+    return value_matches_field_map(value, schema)
+
+
+def normalize_output_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    if _is_formal_output_schema(schema):
+        return schema
+    return {
+        "type": "object",
+        "properties": schema,
+        "required": sorted(schema),
+    }
 
 
 def schema_has_path(schema_map: dict[str, Any], dotted_path: str) -> bool:
@@ -119,10 +141,6 @@ def value_matches_schema(value: Any, schema: Any) -> bool:
         return value_matches_schema(value, {"type": "object", **schema})
 
     return True
-
-
-def field_type_changed(old_schema: Any, new_schema: Any) -> bool:
-    return type_name(old_schema) != type_name(new_schema)
 
 
 def schema_breaking_changes(
@@ -191,3 +209,10 @@ def _items(schema: Any) -> Any:
     if isinstance(schema, dict):
         return schema.get("items")
     return None
+
+
+def _is_formal_output_schema(schema: dict[str, Any]) -> bool:
+    schema_type = schema.get("type")
+    return schema_type == "object" or "properties" in schema or (
+        "required" in schema and isinstance(schema.get("required"), list)
+    )
