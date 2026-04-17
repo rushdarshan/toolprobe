@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from toolprobe.models import Contract, Tool
 from toolprobe.result import Finding
-from toolprobe.schema import field_type_changed
+from toolprobe.schema import schema_breaking_changes
 
 
 def diff_contracts(old: Contract, new: Contract) -> list[Finding]:
@@ -26,6 +26,8 @@ def _diff_tool(old: Tool, new: Tool) -> list[Finding]:
 
     old_required = set(old.required_args)
     new_required = set(new.required_args)
+    old_forbidden = set(old.forbidden_args)
+    new_forbidden = set(new.forbidden_args)
     old_args = set(old.args)
     new_args = set(new.args)
 
@@ -38,9 +40,18 @@ def _diff_tool(old: Tool, new: Tool) -> list[Finding]:
     for arg_name in sorted(old_required - new_required):
         findings.append(Finding("removed-required-arg", f"argument '{arg_name}' is no longer required", f"{path}.required_args"))
 
+    for arg_name in sorted(new_forbidden - old_forbidden):
+        findings.append(Finding("added-forbidden-arg", f"argument '{arg_name}' is newly forbidden", f"{path}.forbidden_args"))
+
     for arg_name in sorted(old_args.intersection(new_args)):
-        if field_type_changed(old.args[arg_name], new.args[arg_name]):
-            findings.append(Finding("arg-type-changed", f"argument '{arg_name}' changed type", f"{path}.args.{arg_name}"))
+        findings.extend(
+            schema_breaking_changes(
+                old.args[arg_name],
+                new.args[arg_name],
+                f"{path}.args.{arg_name}",
+                "arg-type-changed",
+            )
+        )
 
     for trigger in sorted(set(old.triggers) - set(new.triggers)):
         findings.append(Finding("removed-trigger", f"trigger was removed: {trigger!r}", f"{path}.triggers"))
@@ -51,8 +62,14 @@ def _diff_tool(old: Tool, new: Tool) -> list[Finding]:
         findings.append(Finding("removed-output-field", f"output field '{field_name}' was removed", f"{path}.output_schema.{field_name}"))
 
     for field_name in sorted(set(old_output).intersection(new_output)):
-        if field_type_changed(old_output[field_name], new_output[field_name]):
-            findings.append(Finding("output-type-changed", f"output field '{field_name}' changed type", f"{path}.output_schema.{field_name}"))
+        findings.extend(
+            schema_breaking_changes(
+                old_output[field_name],
+                new_output[field_name],
+                f"{path}.output_schema.{field_name}",
+                "output-type-changed",
+            )
+        )
 
     old_recoveries = {error.name for error in old.mock_errors if error.expected_recovery_contains}
     new_recoveries = {error.name for error in new.mock_errors if error.expected_recovery_contains}
@@ -60,4 +77,3 @@ def _diff_tool(old: Tool, new: Tool) -> list[Finding]:
         findings.append(Finding("removed-recovery", f"recovery expectation for '{error_name}' was removed", f"{path}.mock_errors"))
 
     return findings
-

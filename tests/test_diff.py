@@ -78,3 +78,145 @@ tools: []
 
     assert any(finding.code == "removed-tool" for finding in findings)
 
+
+def test_diff_flags_deep_arg_type_changes() -> None:
+    old = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: update_user
+    description: Update user.
+    args:
+      profile:
+        type: object
+        properties:
+          name: string
+          age: integer
+"""
+    )
+    new = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: update_user
+    description: Update user.
+    args:
+      profile:
+        type: object
+        properties:
+          name: integer
+          age: integer
+"""
+    )
+
+    findings = diff_contracts(old, new)
+
+    assert any(finding.code == "arg-type-changed" and "profile.properties.name" in finding.path for finding in findings)
+
+
+def test_diff_flags_added_nested_required_property() -> None:
+    old = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: update_user
+    description: Update user.
+    args:
+      profile:
+        type: object
+        properties:
+          name: string
+          email: string
+        required:
+          - name
+"""
+    )
+    new = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: update_user
+    description: Update user.
+    args:
+      profile:
+        type: object
+        properties:
+          name: string
+          email: string
+        required:
+          - name
+          - email
+"""
+    )
+
+    findings = diff_contracts(old, new)
+
+    assert any(finding.code == "added-required-property" and "profile.required" in finding.path for finding in findings)
+
+
+def test_diff_flags_added_forbidden_arg() -> None:
+    old = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get weather.
+    args:
+      city: string
+      country: string
+"""
+    )
+    new = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get weather.
+    args:
+      city: string
+      country: string
+    forbidden_args:
+      - country
+"""
+    )
+
+    findings = diff_contracts(old, new)
+
+    assert any(finding.code == "added-forbidden-arg" for finding in findings)
+
+
+def test_diff_flags_deep_output_type_changes() -> None:
+    old = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get weather.
+    args:
+      city: string
+    output_schema:
+      forecast:
+        type: object
+        properties:
+          condition: string
+"""
+    )
+    new = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get weather.
+    args:
+      city: string
+    output_schema:
+      forecast:
+        type: object
+        properties:
+          condition: integer
+"""
+    )
+
+    findings = diff_contracts(old, new)
+
+    assert any(finding.code == "output-type-changed" and "forecast.properties.condition" in finding.path for finding in findings)
