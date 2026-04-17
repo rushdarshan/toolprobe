@@ -67,7 +67,7 @@ def _diff_tool(old: Tool, new: Tool) -> list[Finding]:
                 new.args[arg_name],
                 f"{path}.args.{arg_name}",
                 "arg-type-changed",
-                "input",
+                is_output=False,
             )
         )
 
@@ -80,7 +80,7 @@ def _diff_tool(old: Tool, new: Tool) -> list[Finding]:
             normalize_output_schema(new.output_schema),
             f"{path}.output_schema",
             "output-type-changed",
-            "output",
+            is_output=True,
         )
     )
 

@@ -17,8 +17,12 @@ tools:
     triggers:
       - "flights to {destination} on {date}"
     output_schema:
-      flights:
-        type: array
+      type: object
+      properties:
+        flights:
+          type: array
+      required:
+        - flights
     mock_errors:
       - name: timeout
         response:
@@ -39,7 +43,11 @@ tools:
     triggers:
       - "flights to {destination}"
     output_schema:
-      flights: string
+      type: object
+      properties:
+        flights: string
+      required:
+        - flights
     mock_errors:
       - name: timeout
         response:
@@ -228,10 +236,14 @@ tools:
     args:
       city: string
     output_schema:
-      forecast:
-        type: object
-        properties:
-          condition: string
+      type: object
+      properties:
+        forecast:
+          type: object
+          properties:
+            condition: string
+      required:
+        - forecast
 """
     )
     new = load_contract_text(
@@ -243,10 +255,14 @@ tools:
     args:
       city: string
     output_schema:
-      forecast:
-        type: object
-        properties:
-          condition: integer
+      type: object
+      properties:
+        forecast:
+          type: object
+          properties:
+            condition: integer
+      required:
+        - forecast
 """
     )
 
@@ -335,14 +351,18 @@ tools:
     args:
       id: string
     output_schema:
-      profile:
-        type: object
-        properties:
-          name: string
-          email: string
-        required:
-          - name
-          - email
+      type: object
+      properties:
+        profile:
+          type: object
+          properties:
+            name: string
+            email: string
+          required:
+            - name
+            - email
+      required:
+        - profile
 """
     )
     new = load_contract_text(
@@ -354,13 +374,17 @@ tools:
     args:
       id: string
     output_schema:
-      profile:
-        type: object
-        properties:
-          name: string
-          email: string
-        required:
-          - name
+      type: object
+      properties:
+        profile:
+          type: object
+          properties:
+            name: string
+            email: string
+          required:
+            - name
+      required:
+        - profile
 """
     )
 
@@ -379,13 +403,17 @@ tools:
     args:
       id: string
     output_schema:
-      profile:
-        type: object
-        properties:
-          name: string
-          email: string
-        required:
-          - name
+      type: object
+      properties:
+        profile:
+          type: object
+          properties:
+            name: string
+            email: string
+          required:
+            - name
+      required:
+        - profile
 """
     )
     new = load_contract_text(
@@ -397,14 +425,18 @@ tools:
     args:
       id: string
     output_schema:
-      profile:
-        type: object
-        properties:
-          name: string
-          email: string
-        required:
-          - name
-          - email
+      type: object
+      properties:
+        profile:
+          type: object
+          properties:
+            name: string
+            email: string
+          required:
+            - name
+            - email
+      required:
+        - profile
 """
     )
 

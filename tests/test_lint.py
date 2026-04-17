@@ -17,7 +17,11 @@ tools:
     triggers:
       - "weather in {city}"
     output_schema:
-      condition: string
+      type: object
+      properties:
+        condition: string
+      required:
+        - condition
     mock_success:
       condition: sunny
 """
@@ -102,7 +106,11 @@ tools:
     args:
       city: string
     output_schema:
-      temperature_c: number
+      type: object
+      properties:
+        temperature_c: number
+      required:
+        - temperature_c
     mock_success:
       temperature_c: hot
 """
@@ -188,10 +196,14 @@ tools:
     args:
       id: string
     output_schema:
-      user:
-        type: object
-        required:
-          - id
+      type: object
+      properties:
+        user:
+          type: object
+          required:
+            - id
+      required:
+        - user
     mock_success:
       user: {}
 """
@@ -267,8 +279,13 @@ tools:
     args:
       city: string
     output_schema:
-      temperature_c: number
-      condition: string
+      type: object
+      properties:
+        temperature_c: number
+        condition: string
+      required:
+        - temperature_c
+        - condition
     mock_success:
       condition: sunny
 """

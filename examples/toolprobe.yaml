@@ -15,8 +15,13 @@ tools:
       - "weather in {city}"
       - "what's it like in {city}"
     output_schema:
-      temperature_c: number
-      condition: string
+      type: object
+      properties:
+        temperature_c: number
+        condition: string
+      required:
+        - temperature_c
+        - condition
     mock_success:
       temperature_c: 32
       condition: sunny
@@ -40,10 +45,13 @@ tools:
       - "flights to {destination} on {date}"
       - "book a flight to {destination}"
     output_schema:
-      flights:
-        type: array
-        items:
-          type: object
+      type: object
+      properties:
+        flights:
+          type: array
+          items:
+            type: object
+      required:
+        - flights
     mock_success:
       flights: []
-

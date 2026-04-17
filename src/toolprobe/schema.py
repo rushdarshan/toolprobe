@@ -56,38 +56,24 @@ def is_valid_schema(schema: Any) -> bool:
     return True
 
 
-def is_valid_field_map(schema_map: dict[str, Any]) -> bool:
-    return all(is_valid_schema(child) for child in schema_map.values())
-
-
 def is_valid_output_schema(schema: dict[str, Any]) -> bool:
-    if _is_formal_output_schema(schema):
-        return type_name(schema) == "object" and is_valid_schema(schema)
-    return is_valid_field_map(schema)
-
-
-def value_matches_field_map(value: Any, schema_map: dict[str, Any]) -> bool:
-    if not isinstance(value, dict):
-        return False
-    if set(value) != set(schema_map):
-        return False
-    return all(value_matches_schema(value[field], schema_map[field]) for field in value)
+    return type_name(schema) == "object" and is_valid_schema(schema)
 
 
 def value_matches_output_schema(value: Any, schema: dict[str, Any]) -> bool:
-    if _is_formal_output_schema(schema):
-        return value_matches_schema(value, schema)
-    return value_matches_field_map(value, schema)
+    if not schema:
+        return value == {}
+    return value_matches_schema(value, schema)
 
 
 def normalize_output_schema(schema: dict[str, Any]) -> dict[str, Any]:
-    if _is_formal_output_schema(schema):
-        return schema
-    return {
-        "type": "object",
-        "properties": schema,
-        "required": sorted(schema),
-    }
+    if not schema:
+        return {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        }
+    return schema
 
 
 def schema_has_path(schema_map: dict[str, Any], dotted_path: str) -> bool:
@@ -148,7 +134,7 @@ def schema_breaking_changes(
     new_schema: Any,
     path: str,
     type_code: str,
-    direction: str,
+    is_output: bool = False,
 ) -> list[Finding]:
     findings: list[Finding] = []
     old_type = type_name(old_schema)
@@ -170,13 +156,13 @@ def schema_breaking_changes(
                     new_properties[field_name],
                     f"{path}.properties.{field_name}",
                     type_code,
-                    direction,
+                    is_output,
                 )
             )
-        if direction == "input":
+        if not is_output:
             for field_name in sorted(_required(new_schema) - _required(old_schema)):
                 findings.append(Finding("added-required-property", f"property '{field_name}' is newly required", f"{path}.required"))
-        if direction == "output":
+        if is_output:
             for field_name in sorted(_required(old_schema) - _required(new_schema)):
                 findings.append(Finding("removed-required-property", f"property '{field_name}' is no longer required", f"{path}.required"))
 
@@ -184,10 +170,10 @@ def schema_breaking_changes(
         old_items = _items(old_schema)
         new_items = _items(new_schema)
         if old_items is not None and new_items is not None:
-            findings.extend(schema_breaking_changes(old_items, new_items, f"{path}.items", type_code, direction))
-        elif direction == "input" and old_items is None and new_items is not None:
+            findings.extend(schema_breaking_changes(old_items, new_items, f"{path}.items", type_code, is_output))
+        elif not is_output and old_items is None and new_items is not None:
             findings.append(Finding("added-items-schema", "array items schema was added", f"{path}.items"))
-        elif direction == "output" and old_items is not None and new_items is None:
+        elif is_output and old_items is not None and new_items is None:
             findings.append(Finding("removed-items-schema", "array items schema was removed", f"{path}.items"))
 
     return findings
@@ -209,10 +195,3 @@ def _items(schema: Any) -> Any:
     if isinstance(schema, dict):
         return schema.get("items")
     return None
-
-
-def _is_formal_output_schema(schema: dict[str, Any]) -> bool:
-    schema_type = schema.get("type")
-    return schema_type == "object" or "properties" in schema or (
-        "required" in schema and isinstance(schema.get("required"), list)
-    )

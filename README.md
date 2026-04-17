@@ -48,8 +48,13 @@ tools:
       - "weather in {city}"
       - "what's it like in {city}"
     output_schema:
-      temperature_c: number
-      condition: string
+      type: object
+      properties:
+        temperature_c: number
+        condition: string
+      required:
+        - temperature_c
+        - condition
     mock_success:
       temperature_c: 32
       condition: sunny
@@ -60,8 +65,8 @@ tools:
         expected_recovery_contains: "couldn't fetch"
 ```
 
-`output_schema` also accepts a formal root object schema when only some top-level
-fields are required:
+`output_schema` is a standard root object schema, so you can make only some
+top-level fields required:
 
 ```yaml
 output_schema:
