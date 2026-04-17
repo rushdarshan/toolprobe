@@ -96,6 +96,30 @@ tools:
     assert any(finding.code == "unknown-trigger-field" for finding in findings)
 
 
+def test_lint_validates_trigger_field_inside_array_items() -> None:
+    contract = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: summarize_orders
+    description: Summarize orders.
+    args:
+      orders:
+        type: array
+        items:
+          type: object
+          properties:
+            id: string
+    triggers:
+      - "summarize order {orders.id}"
+"""
+    )
+
+    findings = lint_contract(contract)
+
+    assert not any(finding.code == "unknown-trigger-field" for finding in findings)
+
+
 def test_lint_flags_mock_schema_mismatch() -> None:
     contract = load_contract_text(
         """
@@ -154,6 +178,44 @@ tools:
           id: string
         required:
           - missing
+"""
+    )
+
+    findings = lint_contract(contract)
+
+    assert any(finding.code == "invalid-arg-schema" for finding in findings)
+
+
+@pytest.mark.parametrize(
+    "schema",
+    [
+        """
+type: string
+properties:
+  id: string
+""",
+        """
+type: object
+items: string
+""",
+        """
+properties:
+  id: string
+items: string
+""",
+    ],
+)
+def test_lint_rejects_inconsistent_schema_keywords(schema: str) -> None:
+    indented_schema = "\n".join(f"      {line}" if line else line for line in schema.strip().splitlines())
+    contract = load_contract_text(
+        f"""
+contract: v1
+tools:
+  - name: bad_tool
+    description: Bad tool.
+    args:
+      payload:
+{indented_schema}
 """
     )
 
@@ -344,3 +406,63 @@ tools:
     findings = lint_contract(contract)
 
     assert any(finding.code == "mock-success-schema-mismatch" for finding in findings)
+
+
+def test_mock_success_rejects_unknown_output_properties() -> None:
+    contract = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get current weather.
+    args:
+      city: string
+    output_schema:
+      type: object
+      properties:
+        condition: string
+      required:
+        - condition
+    mock_success:
+      condition: sunny
+      unexpected: value
+"""
+    )
+
+    findings = lint_contract(contract)
+
+    assert any(finding.code == "mock-success-schema-mismatch" for finding in findings)
+
+
+def test_lint_flags_duplicate_mock_error_names() -> None:
+    contract = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get current weather.
+    args:
+      city: string
+    mock_errors:
+      - name: timeout
+        response:
+          error: timeout
+      - name: timeout
+        response:
+          error: still timeout
+"""
+    )
+
+    findings = lint_contract(contract)
+
+    assert any(finding.code == "duplicate-mock-error" for finding in findings)
+
+
+def test_parser_rejects_unsupported_contract_version() -> None:
+    with pytest.raises(ContractLoadError, match="unsupported contract version"):
+        load_contract_text(
+            """
+contract: v2
+tools: []
+"""
+        )

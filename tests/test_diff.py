@@ -564,6 +564,37 @@ tools:
     assert any(finding.code == "changed-recovery" for finding in findings)
 
 
+def test_diff_flags_removed_mock_error_without_recovery_as_warning() -> None:
+    old = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get weather.
+    args:
+      city: string
+    mock_errors:
+      - name: timeout
+        response:
+          error: timeout
+"""
+    )
+    new = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get weather.
+    args:
+      city: string
+"""
+    )
+
+    findings = diff_contracts(old, new)
+
+    assert any(finding.code == "removed-mock-error" and finding.severity == Severity.WARNING for finding in findings)
+
+
 def test_diff_handles_implicit_array_schemas() -> None:
     old = load_contract_text(
         """

@@ -59,7 +59,17 @@ def lint_contract(contract: Contract) -> list[Finding]:
                     )
                 )
 
+        seen_mock_errors: set[str] = set()
         for error_index, mock_error in enumerate(tool.mock_errors):
+            if mock_error.name in seen_mock_errors:
+                findings.append(
+                    Finding(
+                        "duplicate-mock-error",
+                        f"mock error '{mock_error.name}' is defined more than once",
+                        f"{path}.mock_errors[{error_index}]",
+                    )
+                )
+            seen_mock_errors.add(mock_error.name)
             if not mock_error.response:
                 findings.append(
                     Finding(

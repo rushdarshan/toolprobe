@@ -102,4 +102,16 @@ def _diff_tool(old: Tool, new: Tool) -> list[Finding]:
                 )
             )
 
+    old_mock_errors = {error.name for error in old.mock_errors}
+    new_mock_errors = {error.name for error in new.mock_errors}
+    for error_name in sorted(old_mock_errors - new_mock_errors - set(old_recoveries)):
+        findings.append(
+            Finding(
+                "removed-mock-error",
+                f"mock error '{error_name}' was removed",
+                f"{path}.mock_errors",
+                Severity.WARNING,
+            )
+        )
+
     return findings

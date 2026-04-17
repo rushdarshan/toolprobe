@@ -58,6 +58,8 @@ def load_contract_text(text: str, source: str = "<memory>") -> Contract:
     contract_version = raw.get("contract")
     if not isinstance(contract_version, str):
         raise ContractLoadError(f"{source}: contract must define string field 'contract'")
+    if contract_version != "v1":
+        raise ContractLoadError(f"{source}: unsupported contract version '{contract_version}'")
 
     raw_tools = raw.get("tools")
     if not isinstance(raw_tools, list):

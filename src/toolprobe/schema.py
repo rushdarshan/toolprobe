@@ -33,6 +33,12 @@ def is_valid_schema(schema: Any) -> bool:
         return False
     if schema_type is None and "properties" not in schema and "required" not in schema and "items" not in schema:
         return False
+    if schema_type not in (None, "object") and ("properties" in schema or "required" in schema):
+        return False
+    if schema_type not in (None, "array") and "items" in schema:
+        return False
+    if schema_type is None and ("properties" in schema or "required" in schema) and "items" in schema:
+        return False
 
     required = schema.get("required")
     if required is not None:
@@ -84,6 +90,9 @@ def schema_has_path(schema_map: dict[str, Any], dotted_path: str) -> bool:
     current_schema = schema_map[parts[0]]
     for part in parts[1:]:
         properties = _properties(current_schema)
+        if not properties and type_name(current_schema) == "array":
+            current_schema = _items(current_schema)
+            properties = _properties(current_schema)
         if part not in properties:
             return False
         current_schema = properties[part]
@@ -118,6 +127,8 @@ def value_matches_schema(value: Any, schema: Any) -> bool:
             if any(field not in value for field in required):
                 return False
         if isinstance(schema, dict) and isinstance(schema.get("properties"), dict):
+            if set(value) - set(schema["properties"]):
+                return False
             for key, child_schema in schema["properties"].items():
                 if key in value and not value_matches_schema(value[key], child_schema):
                     return False
