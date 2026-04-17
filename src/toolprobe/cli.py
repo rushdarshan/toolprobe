@@ -43,11 +43,17 @@ def _lint(path: str) -> int:
 
 
 def _diff(base: str, path: str) -> int:
-    old_text = read_file_at_ref(base, path)
-    old_contract = load_contract_text(old_text, source=f"{base}:{path}")
     new_contract = load_contract_file(path)
-
     findings = lint_contract(new_contract)
+
+    old_text = read_file_at_ref(base, path, missing_ok=True)
+    if old_text is None:
+        _print_findings(f"ToolProbe diff against {base}", findings)
+        if not has_errors(findings):
+            print(f"Note: {path} does not exist at {base}; treating this as a new contract.")
+        return 1 if has_errors(findings) else 0
+
+    old_contract = load_contract_text(old_text, source=f"{base}:{path}")
     findings.extend(diff_contracts(old_contract, new_contract))
 
     _print_findings(f"ToolProbe diff against {base}", findings)
