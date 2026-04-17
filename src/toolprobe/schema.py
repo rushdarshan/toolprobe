@@ -45,6 +45,8 @@ def is_valid_schema(schema: Any) -> bool:
     if properties is not None:
         if not isinstance(properties, dict):
             return False
+        if required is not None and any(field not in properties for field in required):
+            return False
         return all(is_valid_schema(child) for child in properties.values())
 
     items = schema.get("items")
@@ -61,9 +63,23 @@ def is_valid_field_map(schema_map: dict[str, Any]) -> bool:
 def value_matches_field_map(value: Any, schema_map: dict[str, Any]) -> bool:
     if not isinstance(value, dict):
         return False
-    if set(value) - set(schema_map):
+    if set(value) != set(schema_map):
         return False
     return all(value_matches_schema(value[field], schema_map[field]) for field in value)
+
+
+def schema_has_path(schema_map: dict[str, Any], dotted_path: str) -> bool:
+    parts = dotted_path.split(".")
+    if not parts or parts[0] not in schema_map:
+        return False
+
+    current_schema = schema_map[parts[0]]
+    for part in parts[1:]:
+        properties = _properties(current_schema)
+        if part not in properties:
+            return False
+        current_schema = properties[part]
+    return True
 
 
 def value_matches_schema(value: Any, schema: Any) -> bool:
@@ -109,7 +125,13 @@ def field_type_changed(old_schema: Any, new_schema: Any) -> bool:
     return type_name(old_schema) != type_name(new_schema)
 
 
-def schema_breaking_changes(old_schema: Any, new_schema: Any, path: str, type_code: str) -> list[Finding]:
+def schema_breaking_changes(
+    old_schema: Any,
+    new_schema: Any,
+    path: str,
+    type_code: str,
+    direction: str,
+) -> list[Finding]:
     findings: list[Finding] = []
     old_type = type_name(old_schema)
     new_type = type_name(new_schema)
@@ -130,21 +152,24 @@ def schema_breaking_changes(old_schema: Any, new_schema: Any, path: str, type_co
                     new_properties[field_name],
                     f"{path}.properties.{field_name}",
                     type_code,
+                    direction,
                 )
             )
-        for field_name in sorted(_required(new_schema) - _required(old_schema)):
-            findings.append(Finding("added-required-property", f"property '{field_name}' is newly required", f"{path}.required"))
-        for field_name in sorted(_required(old_schema) - _required(new_schema)):
-            findings.append(Finding("removed-required-property", f"property '{field_name}' is no longer required", f"{path}.required"))
+        if direction == "input":
+            for field_name in sorted(_required(new_schema) - _required(old_schema)):
+                findings.append(Finding("added-required-property", f"property '{field_name}' is newly required", f"{path}.required"))
+        if direction == "output":
+            for field_name in sorted(_required(old_schema) - _required(new_schema)):
+                findings.append(Finding("removed-required-property", f"property '{field_name}' is no longer required", f"{path}.required"))
 
     if old_type == "array":
         old_items = _items(old_schema)
         new_items = _items(new_schema)
         if old_items is not None and new_items is not None:
-            findings.extend(schema_breaking_changes(old_items, new_items, f"{path}.items", type_code))
-        elif old_items is None and new_items is not None:
+            findings.extend(schema_breaking_changes(old_items, new_items, f"{path}.items", type_code, direction))
+        elif direction == "input" and old_items is None and new_items is not None:
             findings.append(Finding("added-items-schema", "array items schema was added", f"{path}.items"))
-        elif old_items is not None and new_items is None:
+        elif direction == "output" and old_items is not None and new_items is None:
             findings.append(Finding("removed-items-schema", "array items schema was removed", f"{path}.items"))
 
     return findings

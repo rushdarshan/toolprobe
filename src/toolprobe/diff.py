@@ -53,6 +53,7 @@ def _diff_tool(old: Tool, new: Tool) -> list[Finding]:
                 new.args[arg_name],
                 f"{path}.args.{arg_name}",
                 "arg-type-changed",
+                "input",
             )
         )
 
@@ -71,12 +72,26 @@ def _diff_tool(old: Tool, new: Tool) -> list[Finding]:
                 new_output[field_name],
                 f"{path}.output_schema.{field_name}",
                 "output-type-changed",
+                "output",
             )
         )
 
-    old_recoveries = {error.name for error in old.mock_errors if error.expected_recovery_contains}
-    new_recoveries = {error.name for error in new.mock_errors if error.expected_recovery_contains}
-    for error_name in sorted(old_recoveries - new_recoveries):
+    old_recoveries = {
+        error.name: error.expected_recovery_contains for error in old.mock_errors if error.expected_recovery_contains
+    }
+    new_recoveries = {
+        error.name: error.expected_recovery_contains for error in new.mock_errors if error.expected_recovery_contains
+    }
+    for error_name in sorted(set(old_recoveries) - set(new_recoveries)):
         findings.append(Finding("removed-recovery", f"recovery expectation for '{error_name}' was removed", f"{path}.mock_errors"))
+    for error_name in sorted(set(old_recoveries).intersection(new_recoveries)):
+        if old_recoveries[error_name] != new_recoveries[error_name]:
+            findings.append(
+                Finding(
+                    "changed-recovery",
+                    f"recovery expectation for '{error_name}' changed",
+                    f"{path}.mock_errors.{error_name}",
+                )
+            )
 
     return findings

@@ -48,6 +48,50 @@ tools:
     assert any(finding.code == "unknown-trigger-field" for finding in findings)
 
 
+def test_lint_validates_nested_trigger_field() -> None:
+    contract = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get current weather.
+    args:
+      location:
+        type: object
+        properties:
+          city: string
+    triggers:
+      - "weather in {location.city}"
+"""
+    )
+
+    findings = lint_contract(contract)
+
+    assert not any(finding.code == "unknown-trigger-field" for finding in findings)
+
+
+def test_lint_flags_unknown_nested_trigger_field() -> None:
+    contract = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get current weather.
+    args:
+      location:
+        type: object
+        properties:
+          city: string
+    triggers:
+      - "weather in {location.country}"
+"""
+    )
+
+    findings = lint_contract(contract)
+
+    assert any(finding.code == "unknown-trigger-field" for finding in findings)
+
+
 def test_lint_flags_mock_schema_mismatch() -> None:
     contract = load_contract_text(
         """
@@ -86,6 +130,28 @@ tools:
     findings = lint_contract(contract)
 
     assert any(finding.code == "invalid-output-schema" for finding in findings)
+
+
+def test_lint_flags_required_property_not_declared() -> None:
+    contract = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_user
+    description: Get a user.
+    args:
+      user:
+        type: object
+        properties:
+          id: string
+        required:
+          - missing
+"""
+    )
+
+    findings = lint_contract(contract)
+
+    assert any(finding.code == "invalid-arg-schema" for finding in findings)
 
 
 def test_parser_accepts_empty_optional_yaml_nodes() -> None:
@@ -183,6 +249,28 @@ tools:
     output_schema: {}
     mock_success:
       unexpected: value
+"""
+    )
+
+    findings = lint_contract(contract)
+
+    assert any(finding.code == "mock-success-schema-mismatch" for finding in findings)
+
+
+def test_mock_success_must_include_all_output_fields() -> None:
+    contract = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get current weather.
+    args:
+      city: string
+    output_schema:
+      temperature_c: number
+      condition: string
+    mock_success:
+      condition: sunny
 """
     )
 

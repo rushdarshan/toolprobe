@@ -328,6 +328,50 @@ def test_diff_flags_removed_nested_required_property() -> None:
         """
 contract: v1
 tools:
+  - name: get_user
+    description: Get user.
+    args:
+      id: string
+    output_schema:
+      profile:
+        type: object
+        properties:
+          name: string
+          email: string
+        required:
+          - name
+          - email
+"""
+    )
+    new = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_user
+    description: Get user.
+    args:
+      id: string
+    output_schema:
+      profile:
+        type: object
+        properties:
+          name: string
+          email: string
+        required:
+          - name
+"""
+    )
+
+    findings = diff_contracts(old, new)
+
+    assert any(finding.code == "removed-required-property" and "profile.required" in finding.path for finding in findings)
+
+
+def test_diff_does_not_flag_removed_input_required_property() -> None:
+    old = load_contract_text(
+        """
+contract: v1
+tools:
   - name: update_user
     description: Update user.
     args:
@@ -360,7 +404,44 @@ tools:
 
     findings = diff_contracts(old, new)
 
-    assert any(finding.code == "removed-required-property" and "profile.required" in finding.path for finding in findings)
+    assert not any(finding.code == "removed-required-property" for finding in findings)
+
+
+def test_diff_flags_changed_recovery_expectation() -> None:
+    old = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get weather.
+    args:
+      city: string
+    mock_errors:
+      - name: timeout
+        response:
+          error: timeout
+        expected_recovery_contains: retry
+"""
+    )
+    new = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get weather.
+    args:
+      city: string
+    mock_errors:
+      - name: timeout
+        response:
+          error: timeout
+        expected_recovery_contains: abort
+"""
+    )
+
+    findings = diff_contracts(old, new)
+
+    assert any(finding.code == "changed-recovery" for finding in findings)
 
 
 def test_diff_handles_implicit_array_schemas() -> None:

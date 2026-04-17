@@ -4,9 +4,9 @@ import re
 
 from toolprobe.models import Contract
 from toolprobe.result import Finding, Severity
-from toolprobe.schema import is_valid_field_map, is_valid_schema, value_matches_field_map
+from toolprobe.schema import is_valid_field_map, is_valid_schema, schema_has_path, value_matches_field_map
 
-TEMPLATE_FIELD_PATTERN = re.compile(r"{([A-Za-z_][A-Za-z0-9_]*)}")
+TEMPLATE_FIELD_PATTERN = re.compile(r"{([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)}")
 
 
 def lint_contract(contract: Contract) -> list[Finding]:
@@ -37,7 +37,7 @@ def lint_contract(contract: Contract) -> list[Finding]:
 
         for trigger_index, trigger in enumerate(tool.triggers):
             for field_name in TEMPLATE_FIELD_PATTERN.findall(trigger):
-                if field_name not in tool.args:
+                if not schema_has_path(tool.args, field_name):
                     findings.append(
                         Finding(
                             "unknown-trigger-field",
