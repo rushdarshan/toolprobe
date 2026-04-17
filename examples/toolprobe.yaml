@@ -1,0 +1,49 @@
+contract: v1
+
+tools:
+  - name: get_weather
+    description: Get current weather for a city.
+    args:
+      city: string
+      units:
+        type: string
+    required_args:
+      - city
+    forbidden_args:
+      - country
+    triggers:
+      - "weather in {city}"
+      - "what's it like in {city}"
+    output_schema:
+      temperature_c: number
+      condition: string
+    mock_success:
+      temperature_c: 32
+      condition: sunny
+    mock_errors:
+      - name: timeout
+        response:
+          error: API timeout
+        expected_recovery_contains: "couldn't fetch"
+
+  - name: search_flights
+    description: Search available flights for a destination and travel date.
+    args:
+      destination: string
+      date: string
+      max_price:
+        type: number
+    required_args:
+      - destination
+      - date
+    triggers:
+      - "flights to {destination} on {date}"
+      - "book a flight to {destination}"
+    output_schema:
+      flights:
+        type: array
+        items:
+          type: object
+    mock_success:
+      flights: []
+
