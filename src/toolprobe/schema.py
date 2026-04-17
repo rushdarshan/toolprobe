@@ -13,7 +13,12 @@ def type_name(schema: Any) -> str | None:
         return schema
     if isinstance(schema, dict):
         value = schema.get("type")
-        return value if isinstance(value, str) else None
+        if isinstance(value, str):
+            return value
+        if "properties" in schema or "required" in schema:
+            return "object"
+        if "items" in schema:
+            return "array"
     return None
 
 
@@ -74,12 +79,13 @@ def value_matches_schema(value: Any, schema: Any) -> bool:
     if expected == "object":
         if not isinstance(value, dict):
             return False
-        if isinstance(schema, dict) and isinstance(schema.get("properties"), dict):
+        if isinstance(schema, dict):
             required = schema.get("required", [])
             if not isinstance(required, list):
                 return False
             if any(field not in value for field in required):
                 return False
+        if isinstance(schema, dict) and isinstance(schema.get("properties"), dict):
             for key, child_schema in schema["properties"].items():
                 if key in value and not value_matches_schema(value[key], child_schema):
                     return False
@@ -126,6 +132,8 @@ def schema_breaking_changes(old_schema: Any, new_schema: Any, path: str, type_co
         new_items = _items(new_schema)
         if old_items is not None and new_items is not None:
             findings.extend(schema_breaking_changes(old_items, new_items, f"{path}.items", type_code))
+        elif old_items is None and new_items is not None:
+            findings.append(Finding("added-items-schema", "array items schema was added", f"{path}.items"))
         elif old_items is not None and new_items is None:
             findings.append(Finding("removed-items-schema", "array items schema was removed", f"{path}.items"))
 

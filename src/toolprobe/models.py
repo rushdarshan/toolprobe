@@ -87,7 +87,9 @@ def _parse_tool(raw: dict[str, Any], source: str, index: int) -> Tool:
         raise ContractLoadError(f"{path}.mock_success must be a mapping")
 
     mock_errors: list[MockError] = []
-    raw_mock_errors = raw.get("mock_errors") or []
+    raw_mock_errors = raw.get("mock_errors", [])
+    if raw_mock_errors is None:
+        raw_mock_errors = []
     if not isinstance(raw_mock_errors, list):
         raise ContractLoadError(f"{path}.mock_errors must be a list")
     for error_index, raw_error in enumerate(raw_mock_errors):

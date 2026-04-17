@@ -1,5 +1,7 @@
 from toolprobe.lint import lint_contract
-from toolprobe.models import load_contract_text
+import pytest
+
+from toolprobe.models import ContractLoadError, load_contract_text
 
 
 def test_lint_valid_contract_has_no_errors() -> None:
@@ -108,3 +110,43 @@ tools:
     assert tool.forbidden_args == []
     assert tool.output_schema == {}
     assert tool.mock_errors == []
+
+
+def test_mock_schema_enforces_required_without_properties() -> None:
+    contract = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_user
+    description: Get a user.
+    args:
+      id: string
+    output_schema:
+      user:
+        type: object
+        required:
+          - id
+    mock_success:
+      user: {}
+"""
+    )
+
+    findings = lint_contract(contract)
+
+    assert any(finding.code == "mock-success-schema-mismatch" for finding in findings)
+
+
+@pytest.mark.parametrize("value", ["false", '""', "0"])
+def test_parser_rejects_invalid_falsy_mock_errors(value: str) -> None:
+    with pytest.raises(ContractLoadError, match="mock_errors must be a list"):
+        load_contract_text(
+            f"""
+contract: v1
+tools:
+  - name: get_weather
+    description: Get current weather.
+    args:
+      city: string
+    mock_errors: {value}
+"""
+        )

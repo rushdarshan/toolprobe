@@ -220,3 +220,102 @@ tools:
     findings = diff_contracts(old, new)
 
     assert any(finding.code == "output-type-changed" and "forecast.properties.condition" in finding.path for finding in findings)
+
+
+def test_diff_handles_implicit_object_schemas() -> None:
+    old = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: update_user
+    description: Update user.
+    args:
+      profile:
+        properties:
+          name: string
+          email: string
+        required:
+          - name
+"""
+    )
+    new = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: update_user
+    description: Update user.
+    args:
+      profile:
+        properties:
+          name: integer
+          email: string
+        required:
+          - name
+          - email
+"""
+    )
+
+    findings = diff_contracts(old, new)
+    codes = {finding.code for finding in findings}
+
+    assert "arg-type-changed" in codes
+    assert "added-required-property" in codes
+
+
+def test_diff_flags_added_array_items_schema() -> None:
+    old = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: tag_items
+    description: Tag items.
+    args:
+      tags:
+        type: array
+"""
+    )
+    new = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: tag_items
+    description: Tag items.
+    args:
+      tags:
+        type: array
+        items: string
+"""
+    )
+
+    findings = diff_contracts(old, new)
+
+    assert any(finding.code == "added-items-schema" for finding in findings)
+
+
+def test_diff_handles_implicit_array_schemas() -> None:
+    old = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: tag_items
+    description: Tag items.
+    args:
+      tags:
+        items: string
+"""
+    )
+    new = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: tag_items
+    description: Tag items.
+    args:
+      tags:
+        items: integer
+"""
+    )
+
+    findings = diff_contracts(old, new)
+
+    assert any(finding.code == "arg-type-changed" and "tags.items" in finding.path for finding in findings)
