@@ -31,7 +31,7 @@ def is_valid_schema(schema: Any) -> bool:
     schema_type = schema.get("type")
     if schema_type is not None and schema_type not in PRIMITIVE_TYPES:
         return False
-    if schema_type is None and "properties" not in schema and "items" not in schema:
+    if schema_type is None and "properties" not in schema and "required" not in schema and "items" not in schema:
         return False
 
     required = schema.get("required")
@@ -56,6 +56,14 @@ def is_valid_schema(schema: Any) -> bool:
 
 def is_valid_field_map(schema_map: dict[str, Any]) -> bool:
     return all(is_valid_schema(child) for child in schema_map.values())
+
+
+def value_matches_field_map(value: Any, schema_map: dict[str, Any]) -> bool:
+    if not isinstance(value, dict):
+        return False
+    if set(value) - set(schema_map):
+        return False
+    return all(value_matches_schema(value[field], schema_map[field]) for field in value)
 
 
 def value_matches_schema(value: Any, schema: Any) -> bool:
@@ -126,6 +134,8 @@ def schema_breaking_changes(old_schema: Any, new_schema: Any, path: str, type_co
             )
         for field_name in sorted(_required(new_schema) - _required(old_schema)):
             findings.append(Finding("added-required-property", f"property '{field_name}' is newly required", f"{path}.required"))
+        for field_name in sorted(_required(old_schema) - _required(new_schema)):
+            findings.append(Finding("removed-required-property", f"property '{field_name}' is no longer required", f"{path}.required"))
 
     if old_type == "array":
         old_items = _items(old_schema)

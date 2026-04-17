@@ -185,6 +185,37 @@ tools:
     assert any(finding.code == "added-forbidden-arg" for finding in findings)
 
 
+def test_diff_flags_removed_forbidden_arg() -> None:
+    old = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get weather.
+    args:
+      city: string
+      country: string
+    forbidden_args:
+      - country
+"""
+    )
+    new = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_weather
+    description: Get weather.
+    args:
+      city: string
+      country: string
+"""
+    )
+
+    findings = diff_contracts(old, new)
+
+    assert any(finding.code == "removed-forbidden-arg" for finding in findings)
+
+
 def test_diff_flags_deep_output_type_changes() -> None:
     old = load_contract_text(
         """
@@ -290,6 +321,46 @@ tools:
     findings = diff_contracts(old, new)
 
     assert any(finding.code == "added-items-schema" for finding in findings)
+
+
+def test_diff_flags_removed_nested_required_property() -> None:
+    old = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: update_user
+    description: Update user.
+    args:
+      profile:
+        type: object
+        properties:
+          name: string
+          email: string
+        required:
+          - name
+          - email
+"""
+    )
+    new = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: update_user
+    description: Update user.
+    args:
+      profile:
+        type: object
+        properties:
+          name: string
+          email: string
+        required:
+          - name
+"""
+    )
+
+    findings = diff_contracts(old, new)
+
+    assert any(finding.code == "removed-required-property" and "profile.required" in finding.path for finding in findings)
 
 
 def test_diff_handles_implicit_array_schemas() -> None:

@@ -43,6 +43,9 @@ def _diff_tool(old: Tool, new: Tool) -> list[Finding]:
     for arg_name in sorted(new_forbidden - old_forbidden):
         findings.append(Finding("added-forbidden-arg", f"argument '{arg_name}' is newly forbidden", f"{path}.forbidden_args"))
 
+    for arg_name in sorted(old_forbidden - new_forbidden):
+        findings.append(Finding("removed-forbidden-arg", f"argument '{arg_name}' is no longer forbidden", f"{path}.forbidden_args"))
+
     for arg_name in sorted(old_args.intersection(new_args)):
         findings.extend(
             schema_breaking_changes(

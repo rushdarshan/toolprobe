@@ -4,7 +4,7 @@ import re
 
 from toolprobe.models import Contract
 from toolprobe.result import Finding, Severity
-from toolprobe.schema import is_valid_field_map, is_valid_schema, value_matches_schema
+from toolprobe.schema import is_valid_field_map, is_valid_schema, value_matches_field_map
 
 TEMPLATE_FIELD_PATTERN = re.compile(r"{([A-Za-z_][A-Za-z0-9_]*)}")
 
@@ -49,8 +49,8 @@ def lint_contract(contract: Contract) -> list[Finding]:
         if tool.output_schema and not is_valid_field_map(tool.output_schema):
             findings.append(Finding("invalid-output-schema", "output_schema is not a supported schema", f"{path}.output_schema"))
 
-        if tool.mock_success is not None and tool.output_schema:
-            if not value_matches_schema(tool.mock_success, {"type": "object", "properties": tool.output_schema}):
+        if tool.mock_success is not None:
+            if not value_matches_field_map(tool.mock_success, tool.output_schema):
                 findings.append(
                     Finding(
                         "mock-success-schema-mismatch",

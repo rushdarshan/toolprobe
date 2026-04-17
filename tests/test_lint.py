@@ -150,3 +150,42 @@ tools:
     mock_errors: {value}
 """
         )
+
+
+def test_lint_accepts_required_only_implicit_object_schema() -> None:
+    contract = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: get_user
+    description: Get a user.
+    args:
+      user:
+        required:
+          - id
+"""
+    )
+
+    findings = lint_contract(contract)
+
+    assert not any(finding.code == "invalid-arg-schema" for finding in findings)
+
+
+def test_empty_output_schema_rejects_non_empty_mock_success() -> None:
+    contract = load_contract_text(
+        """
+contract: v1
+tools:
+  - name: ping
+    description: Ping a service.
+    args:
+      service: string
+    output_schema: {}
+    mock_success:
+      unexpected: value
+"""
+    )
+
+    findings = lint_contract(contract)
+
+    assert any(finding.code == "mock-success-schema-mismatch" for finding in findings)
