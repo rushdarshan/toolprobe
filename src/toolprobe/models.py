@@ -87,7 +87,7 @@ def _parse_tool(raw: dict[str, Any], source: str, index: int) -> Tool:
         raise ContractLoadError(f"{path}.mock_success must be a mapping")
 
     mock_errors: list[MockError] = []
-    raw_mock_errors = raw.get("mock_errors", [])
+    raw_mock_errors = raw.get("mock_errors") or []
     if not isinstance(raw_mock_errors, list):
         raise ContractLoadError(f"{path}.mock_errors must be a list")
     for error_index, raw_error in enumerate(raw_mock_errors):
@@ -124,6 +124,8 @@ def _string_field(raw: dict[str, Any], field_name: str, path: str) -> str:
 
 def _dict_field(raw: dict[str, Any], field_name: str, path: str, default: dict[str, Any]) -> dict[str, Any]:
     value = raw.get(field_name, default)
+    if value is None:
+        return default
     if not isinstance(value, dict):
         raise ContractLoadError(f"{path}.{field_name} must be a mapping")
     return value
@@ -131,7 +133,8 @@ def _dict_field(raw: dict[str, Any], field_name: str, path: str, default: dict[s
 
 def _string_list_field(raw: dict[str, Any], field_name: str, path: str) -> list[str]:
     value = raw.get(field_name, [])
+    if value is None:
+        return []
     if not isinstance(value, list) or any(not isinstance(item, str) or not item.strip() for item in value):
         raise ContractLoadError(f"{path}.{field_name} must be a list of non-empty strings")
     return value
-
